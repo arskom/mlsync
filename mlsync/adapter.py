@@ -12,34 +12,29 @@ def find_mirror(url):
         link = soup.find("a", string=target_text)
         if link:
             link_url = link.get("href")
-            return link_url
+            return url+"/"+link_url
         else:
             print("Hedef metin için bağlantı bulunamadı.")
     else:
         print("Sayfa çekilemedi. Hata kodu:", response.status_code)
 
 
-def find_git_clone_code(url):
+def find_git_clone_code(url,link_text):
+    # Web sayfasını indirin
     response = requests.get(url)
 
-    soup = BeautifulSoup(response.content, "html.parser") #TODO hreflerden ayrış
-    anahtar_kelime = "git clone --mirror"
+    # İçeriği analiz etmek için BeautifulSoup kullanın
+    soup = BeautifulSoup(response.content, "html.parser")
 
-    # HTML kodunu satır satır kontrol et
-    for i, satir in enumerate(soup.get_text().split("\n")):
-        satir = satir.replace("# oldest", "").replace(
-            "# newest", ""
-        )  # İfadeleri kaldır
-        if anahtar_kelime in satir:
-            code = satir.strip().replace("--mirror", "")
-            print(code)  # TODO Gereksiz test amaçlı
+    # Verilen anahtar kelimeye sahip olan linkleri seçin ve döndürün
+    for link in soup.find_all("a"):
+        link_split = link.text.split("/")
+        if link_text in link.text and len(link_split) == 5 and link_split[0:3] == ['http:', '', 'lore.kernel.org'] and link_split[-2] == link_text and link_split[-1].isdigit():
+            yield link.get("href")
 
-            yield code  # Birden fazla git olursa ilkini alacak. #TODO
-
-
-
-def git_clone(command):
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)#usr
+def git_clone(url):
+    split_url = url.split("/")
+    result = subprocess.run(["git " + "clone " + url + f" {split_url[-2]}/{split_url[-1]}"], shell=True,)#TODO komutun inputu link olacak ve target belirle !!!
 
     if result.returncode == 0:
         output = result.stdout
@@ -51,7 +46,6 @@ def git_clone(command):
 
 def genel_site_indirme(url):  # url = "https://lore.kernel.org" #Bitmediiiiii !!!!
     response = requests.get(url)
-    print(f"{url} indirildi.")
     soup = BeautifulSoup(response.content, "html.parser")
 
     links = soup.find_all("a")
@@ -62,10 +56,12 @@ def genel_site_indirme(url):  # url = "https://lore.kernel.org" #Bitmediiiiii !!
             link_href = link.get("href")
 
             if type(find_mirror(url + "/" + link_href)) == str and link_text != "all":
-                link_dict[link_text] = (
-                    url + "/" + link_href + "/" + find_mirror(url + "/" + link_href)
-                )
-                git_clone(find_git_clone_code(link_dict[link_text]))
+                link_dict[link_text] = (find_mirror(url + "/" + link_href))
+                a = find_git_clone_code(link_dict[link_text],link_text)
+                print(link_dict)
+
+                for i in a:
+                    git_clone(i)
 
         if "next (older)" in link_dict:
             response = requests.get(link_dict["next (older)"])
