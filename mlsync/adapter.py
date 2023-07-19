@@ -161,6 +161,3 @@ def git_clone_kernel(url):  # url = "https://lore.kernel.org" #Bitmediiiiii !!!!
             break
 
         del link_dict["next (older)"]
-
-
-git_clone_kernel("https://lore.kernel.org")
