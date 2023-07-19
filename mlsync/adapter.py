@@ -19,14 +19,11 @@ def find_mirror(url):
         print("Page could not be fetched. Error code:", response.status_code)
 
 
-def find_git_clone_code(url, link_text):
-    # Web sayfasını indirin
+def find_git_clone_url(url, link_text):
     response = requests.get(url)
 
-    # İçeriği analiz etmek için BeautifulSoup kullanın
     soup = BeautifulSoup(response.content, "html.parser")
 
-    # Verilen anahtar kelimeye sahip olan linkleri seçin ve döndürün
     for link in soup.find_all("a"):
         link_split = link.text.split("/")
         if (
@@ -43,44 +40,35 @@ def git_clone(url):
     split_url = url.split("/")
     result = subprocess.run(
         ["git " + "clone " + url + f" {split_url[-2]}/{split_url[-1]}"], shell=True,
-    )  # TODO komutun inputu link olacak ve target belirle !!!
+    )
 
     if result.returncode == 0:
         output = result.stdout
-        print("Komut çıktısı:\n", output)
+        print("The cloning process has been completed:", output)
     else:
         error = result.stderr
-        print("Hata mesajı:\n", error)
+        print("The cloning process could not be completed.:", error)
 
 
-def files_of_kernel():
-    dizin = "/kernel"  # Dizin yolunu buraya girin
-    dosya_adlari = os.listdir(dizin)
+def update_git_clone(url):
+    split_url = url.split("/")
+    result = subprocess.run(
+        ["git " + "clone " + url + f" {split_url[-1]}"], shell=True,
+    )
 
-    for dosya_adi in dosya_adlari:
-        yield dosya_adi
+    if result.returncode == 0:
+        output = result.stdout
+        print("The update process has been completed:", output)
+    else:
+        error = result.stderr
+        print("The update process could not be completed:", error)
 
 
-def force_find_files_git_code(key_word):
-    url = "https://lore.kernel.org"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
+def files_of_directory():
+    file_names = os.listdir()
 
-    links = soup.find_all("a")
-    href_next = ""
-    while True:
-        for link in links:
-            link_text = link.text.strip()
-            link_href = link.get("href")
-            if link_text == key_word:
-                return find_git_clone_code(find_mirror(url + "/" + link_href), key_word)
-            elif link_text == "next (older)":
-                href_next = link_href
-                url = "https://lore.kernel.org/" + href_next
-                response = requests.get(url)
-                soup = BeautifulSoup(response.content, "html.parser")
-
-                links = soup.find_all("a")
+    for file_name in file_names:
+        yield file_name
 
 
 def check_file_existence(file_name):
@@ -88,37 +76,35 @@ def check_file_existence(file_name):
 
 
 def go_file(file_name):
-
-    result = subprocess.run(["cd " + "/" + file_name], shell=True,)
-    if result.returncode == 0:
-        output = result.stdout
-        print(f"{file_name} adlı dosyaya girdi.")
-    else:
-        error = result.stderr
-        print(f"{file_name} adlı dosyaya giremedi.Hata komutu:\n", error)
+    try:
+        os.chdir(file_name)
+        print(f"Entered the file named {file_name}")
+    except FileNotFoundError:
+        print(f"The file named {file_name} could not be found:")
+    except NotADirectoryError:
+        print(f"{file_name} is not a directory:")
 
 
 def exit_file():
-    result = subprocess.run(["cd " + ".."], shell=True,)
-    if result.returncode == 0:
-        output = result.stdout
-        print("Dosyadan çıkış yapıldı.")
-    else:
-        error = result.stderr
-        print("Dosyadan çıkılırken hata oldu. Hata komutu:\n", error)
+    try:
+        os.chdir("..")
+        current_directory = os.getcwd()
+        print(f"Exited the directory of {current_directory}")
+    except OSError as e:
+        print("Unable to exit the current directory. Error message:\n", e)
 
 
 def pull_file():
     result = subprocess.run(["git " + "pull"], shell=True,)
     if result.returncode == 0:
-        output = result.stdout
-        print("Dosyadan çıkış yapıldı.")
+        print("The file has been updated.")
     else:
         error = result.stderr
-        print("Dosyadan çıkılırken hata oldu. Hata komutu:\n", error)
+        print("The file could not be updated. Error command:", error)
 
 
-def git_clone_kernel(url):  # url = "https://lore.kernel.org" #Bitmediiiiii !!!!
+def git_clone_kernel():
+    url = "https://lore.kernel.org"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
 
@@ -129,15 +115,19 @@ def git_clone_kernel(url):  # url = "https://lore.kernel.org" #Bitmediiiiii !!!!
             link_text = link.text.strip()
             link_href = link.get("href")
 
-            if (
-                link_text != "all"
-            ):  # if type(find_mirror(url + "/" + link_href)) == str and link_text != "all":
-                if link_text != "next (older)" and link_text != "reverse":
-                    link_dict[link_text] = find_mirror(url + "/" + link_href)
-                    print(link_text)
-                elif link_text == "next (older)":
-                    link_dict[link_text] = url + "/" + link_href
-                    print(link_text)
+            if link_text == "all":
+                continue
+
+            if link_text == "reverse":
+                continue
+
+            if link_text == "next (older)":
+                link_dict[link_text] = url + "/" + link_href
+                print(link_text)
+
+            else:
+                link_dict[link_text] = find_mirror(url + "/" + link_href)
+                print(link_text)
 
         if "next (older)" in link_dict:
             response = requests.get(link_dict["next (older)"])
@@ -145,19 +135,47 @@ def git_clone_kernel(url):  # url = "https://lore.kernel.org" #Bitmediiiiii !!!!
             links = soup.find_all("a")
 
         if not "next (older)" in link_dict:
-            a = files_of_kernel()
-            for i in a:
-                pass
+            for name_archive in link_dict.keys():
+                if check_file_existence(name_archive):
+                    go_file(name_archive)
 
-            for i in link_dict.keys():
-                if check_file_existence(i):
-                    print(i, "dosyası zaten bulunmaktadır")
+                    b = files_of_directory()
+                    list_directory = []
+
+                    for files_name in b:
+                        if files_name == ".DS_Store":
+                            continue
+                        list_directory.append(files_name)
+
+                    a = find_git_clone_url(link_dict[name_archive], name_archive)
+                    for git_url in a:
+                        split_url = git_url.split("/")
+
+                        print(list_directory)
+                        print(split_url[-1])
+                        if split_url[-1] in list_directory:
+                            go_file(split_url[-1])
+                            pull_file()
+                            exit_file()
+                        else:
+                            print(
+                                f"A new URL({git_url}) was found inside folder {name_archive} and is being downloaded."
+                            )
+
+                            update_git_clone(git_url)
+                    exit_file()
+
                 else:
-                    print(link_dict[i], "dosyası indiriliyor...")
-                    a = find_git_clone_code(link_dict[i], i)
-                    for git_code in a:
-                        git_clone(git_code)
-            print("kod çıktı ")  # TODO sil buraları
+                    a = find_git_clone_url(link_dict[name_archive], name_archive)
+                    for git_url in a:
+                        git_clone(git_url)
+            if len(link_dict) != 239:
+                print(f"Warning: It was expected to update in 239 files, but {link_dict} files were processed, just letting you know...")
+
+            print("The download and update stages in the kernel are complete.")
             break
 
         del link_dict["next (older)"]
+
+
+git_clone_kernel()
