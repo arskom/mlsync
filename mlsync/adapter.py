@@ -87,9 +87,10 @@ def go_file(file_name):
 
 def exit_file():
     try:
-        os.chdir("..")
         current_directory = os.getcwd()
         print(f"Exited the directory of {current_directory}")
+        os.chdir("..")
+
     except OSError as e:
         print("Unable to exit the current directory. Error message:\n", e)
 
@@ -101,6 +102,36 @@ def pull_file():
     else:
         error = result.stderr
         print("The file could not be updated. Error command:", error)
+
+
+def update_archive(name_archive, link_dict):
+    go_file(name_archive)
+
+    b = files_of_directory()
+    list_directory = []
+
+    for files_name in b:
+        if files_name[0] == ".":
+            continue
+        list_directory.append(files_name)
+
+    a = find_git_clone_url(link_dict[name_archive], name_archive)
+    for git_url in a:
+        split_url = git_url.split("/")
+
+        print(list_directory)
+        print(split_url[-1])
+        if split_url[-1] in list_directory:
+            go_file(split_url[-1])
+            pull_file()
+            exit_file()
+        else:
+            print(
+                f"A new URL({git_url}) was found inside folder {name_archive} and is being downloaded."
+            )
+
+            update_git_clone(git_url)
+    exit_file()
 
 
 def git_clone_kernel():
@@ -123,7 +154,6 @@ def git_clone_kernel():
 
             if link_text == "next (older)":
                 link_dict[link_text] = url + "/" + link_href
-                print(link_text)
 
             else:
                 link_dict[link_text] = find_mirror(url + "/" + link_href)
@@ -134,43 +164,31 @@ def git_clone_kernel():
             soup = BeautifulSoup(response.content, "html.parser")
             links = soup.find_all("a")
 
-        if not "next (older)" in link_dict:
+        else:
+            names_archives_files = []
+            for name_file in files_of_directory():
+                if name_file[0] == ".":
+                    continue
+                names_archives_files.append(name_file)
+
             for name_archive in link_dict.keys():
                 if check_file_existence(name_archive):
-                    go_file(name_archive)
-
-                    b = files_of_directory()
-                    list_directory = []
-
-                    for files_name in b:
-                        if files_name == ".DS_Store":
-                            continue
-                        list_directory.append(files_name)
-
-                    a = find_git_clone_url(link_dict[name_archive], name_archive)
-                    for git_url in a:
-                        split_url = git_url.split("/")
-
-                        print(list_directory)
-                        print(split_url[-1])
-                        if split_url[-1] in list_directory:
-                            go_file(split_url[-1])
-                            pull_file()
-                            exit_file()
-                        else:
-                            print(
-                                f"A new URL({git_url}) was found inside folder {name_archive} and is being downloaded."
-                            )
-
-                            update_git_clone(git_url)
-                    exit_file()
+                    names_archives_files.remove(name_archive)
+                    update_archive(name_archive, link_dict)
 
                 else:
                     a = find_git_clone_url(link_dict[name_archive], name_archive)
                     for git_url in a:
                         git_clone(git_url)
-            if len(link_dict) != 239:
-                print(f"Warning: It was expected to update in 239 files, but {link_dict} files were processed, just letting you know...")
+            if len(names_archives_files) != 0:
+                for files_name in names_archives_files:
+                    print(
+                        f"Just to inform you, the file named **** {files_name} **** was not updated."
+                    )
+            else:
+                print(
+                    "*****The update has been successfully performed for all files.*****"
+                )
 
             print("The download and update stages in the kernel are complete.")
             break
