@@ -38,10 +38,8 @@ def find_git_clone_url(url, link_text):
 
 def git_clone(url):
     split_url = url.split("/")
-    result = subprocess.run(
-        ["git " + "clone " + url + f" {split_url[-2]}/{split_url[-1]}"], shell=True,
-    )
-
+    result = subprocess.run(["git", "clone", url, f"{split_url[-2]}/{split_url[-1]}"])
+    print(split_url)
     if result.returncode == 0:
         output = result.stdout
         print("The cloning process has been completed:", output)
@@ -49,12 +47,10 @@ def git_clone(url):
         error = result.stderr
         print("The cloning process could not be completed.:", error)
 
-
 def update_git_clone(url):
     split_url = url.split("/")
     result = subprocess.run(
-        ["git " + "clone " + url + f" {split_url[-1]}"], shell=True,
-    )
+        ["git", "clone", url, f"{split_url[-1]}"])
 
     if result.returncode == 0:
         output = result.stdout
@@ -95,8 +91,8 @@ def exit_file():
         print("Unable to exit the current directory. Error message:\n", e)
 
 
-def pull_file():
-    result = subprocess.run(["git " + "pull"], shell=True,)
+def pull_file(): #TODO
+    result = subprocess.run(["git", "pull"])
     if result.returncode == 0:
         print("The file has been updated.")
     else:

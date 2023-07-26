@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import os
+import subprocess
 
 
 def find_archive_link(url):
@@ -10,20 +11,18 @@ def find_archive_link(url):
         print("Siteye erişilemedi.")
         exit()
 
-    soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(response.content, "html.parser")
 
-    data = {}  # Linkleri ve metinleri saklayacağımız sözlük
+    data = {}
 
-    for link in soup.find_all('a'):
-        href = link.get('href')
-        text = link.text.strip()  # Gereksiz boşlukları kaldır
+    for link in soup.find_all("a"):
+        href = link.get("href")
+        text = link.text.strip()
         if text == "Entire archive (mbox)":
             b = url.split("/")
             url = "/".join(b[:3])
             data[text] = url + href
             return data[text]
-
-
 
 
 def go_file(file_name):
@@ -38,6 +37,7 @@ def go_file(file_name):
 
 def make_directory(name_directory):
     import os
+
     directory_path = name_directory
 
     try:
@@ -45,6 +45,7 @@ def make_directory(name_directory):
         print(f"{directory_path} dizini oluşturuldu.")
     except FileExistsError:
         print(f"{directory_path} dizini zaten mevcut.")
+
 
 def exit_file():
     try:
@@ -55,10 +56,12 @@ def exit_file():
     except OSError as e:
         print("Unable to exit the current directory. Error message:\n", e)
 
+
 def download_file(url):
     split_url = url.split("/")
     result = subprocess.run(
-        ["curl -o  " + split_url[-1] +" -L "+ url], shell=True,
+        ["curl -o  " + split_url[-1] + " -L " + url],
+        shell=True,
     )
 
     if result.returncode == 0:
@@ -69,17 +72,16 @@ def download_file(url):
         print("The cloning process could not be completed.:", error)
 
 
-
-url = "https://mail.python.org/archives/"  # Verileri çekeceğiniz sitenin URL'si
+url = "https://mail.python.org/archives/"
 response = requests.get(url)
-soup = BeautifulSoup(response.content, 'html.parser')
-dict_archive_links = {}  # Linkleri ve metinleri saklayacağımız sözlük
-links = soup.find_all('a')
+soup = BeautifulSoup(response.content, "html.parser")
+dict_archive_links = {}
+links = soup.find_all("a")
 while True:
     for link in links:
-        href = link.get('href')
+        href = link.get("href")
         text = link.text.strip()
-        if text == "" :
+        if text == "":
             continue
         elif "/archives/list/" in href:
             dict_archive_links[text] = url + href[10:]
@@ -102,6 +104,3 @@ while True:
             download_file(a)
             exit_file()
         break
-
-
-
