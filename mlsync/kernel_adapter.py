@@ -2,6 +2,7 @@ import subprocess
 import os
 from bs4 import BeautifulSoup
 import requests
+import time
 
 
 def find_mirror(url):
@@ -17,6 +18,12 @@ def find_mirror(url):
             print("Failed to reach the mirror link.")
     else:
         print("Page could not be fetched. Error code:", response.status_code)
+
+
+def initial_make_directory():
+    os.chdir(os.path.expanduser("~"))
+    dizin_yolu = os.path.join("data", "ml", "lore.kernel.org")
+    os.makedirs(dizin_yolu, exist_ok=True)
 
 
 def find_git_clone_url(url, link_text):
@@ -39,7 +46,7 @@ def find_git_clone_url(url, link_text):
 def git_clone(url):
     split_url = url.split("/")
     result = subprocess.run(["git", "clone", url, f"{split_url[-2]}/{split_url[-1]}"])
-    print(split_url)
+
     if result.returncode == 0:
         output = result.stdout
         print("The cloning process has been completed:", output)
@@ -47,10 +54,10 @@ def git_clone(url):
         error = result.stderr
         print("The cloning process could not be completed.:", error)
 
+
 def update_git_clone(url):
     split_url = url.split("/")
-    result = subprocess.run(
-        ["git", "clone", url, f"{split_url[-1]}"])
+    result = subprocess.run(["git", "clone", url, f"{split_url[-1]}"])
 
     if result.returncode == 0:
         output = result.stdout
@@ -91,7 +98,7 @@ def exit_file():
         print("Unable to exit the current directory. Error message:\n", e)
 
 
-def pull_file(): #TODO
+def pull_file():
     result = subprocess.run(["git", "pull"])
     if result.returncode == 0:
         print("The file has been updated.")
@@ -131,6 +138,7 @@ def update_archive(name_archive, link_dict):
 
 
 def git_clone_kernel():
+    initial_make_directory()
     url = "https://lore.kernel.org"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -192,4 +200,6 @@ def git_clone_kernel():
         del link_dict["next (older)"]
 
 
-git_clone_kernel()
+while True:
+    git_clone_kernel()
+    time.sleep(600)

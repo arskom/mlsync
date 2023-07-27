@@ -72,7 +72,7 @@ def download_file(url):
         print("The cloning process could not be completed.:", error)
 
 
-url = "https://mail.python.org/archives/"
+url = "https://mail.python.org/archives/" 
 response = requests.get(url)
 soup = BeautifulSoup(response.content, "html.parser")
 dict_archive_links = {}
