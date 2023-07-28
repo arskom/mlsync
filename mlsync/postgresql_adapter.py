@@ -1,17 +1,15 @@
+
+import configparser
+import http.client as http_client
 import logging
+import os
 import sys
-from pprint import pprint
+from urllib.parse import urlencode
+
+import requests
 
 from bs4 import BeautifulSoup
-import requests
-import configparser
-import os
 
-try:
-    import http.client as http_client
-except ImportError:
-    # Python 2
-    import httplib as http_client
 http_client.HTTPConnection.debuglevel = 1
 
 # You must initialize logging, otherwise you'll not see debug output.
@@ -49,7 +47,6 @@ def list_name_archive_link ():
             yield list_archive_link
 
 def list_date_link(url):
-
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     rows = soup.find_all('tr')
@@ -90,7 +87,7 @@ def exit_file():
 
 
 config = configparser.ConfigParser()
-config.read('/Users/burak/src/mlsync/mlsync/config.ini')
+config.read('config.ini')
 
 username = config.get('Credentials', 'username')
 password = config.get('Credentials', 'password')
@@ -111,6 +108,8 @@ payload = {
     "password": password,
 }
 
+payload_enc = urlencode(payload)
+
 headers = {
     "Authority": "www.postgresql.org",
     "Upgrade-Insecure-Requests": "1",
@@ -130,38 +129,67 @@ headers = {
 
 
 import pycurl
-from urllib.parse import urlencode
 csrftoken = session.cookies["csrftoken"]
 print(csrftoken)
-sys.exit(0)
+
+
+
+headers = []
+def cb_headers(header_line):
+    # HTTP standard specifies that headers are encoded in iso-8859-1.
+    header_line = header_line.decode('iso-8859-1')
+    if not (':' in header_line):
+        return
+
+    # Break the header line into header name and value.
+    name, value = header_line.split(':', 1)
+
+    # Remove whitespace that may be present.
+    # Header lines include the trailing newline, and there may be whitespace
+    # around the colon.
+    name = name.strip()
+    value = value.strip()
+
+    # Header names are case insensitive.
+    # Lowercase name here.
+    name = name.lower()
+
+    # Now we can actually record the header name and value.
+    # Note: this only works when headers are not duplicated, see below.
+    headers.append((name, value))
+
+print("POST PAYLOAD:", payload_enc)
 c = pycurl.Curl()
 c.setopt(c.URL, "https://www.postgresql.org/account/login/")
-c.setopt(c.POSTFIELDS, payload)
+c.setopt(c.POSTFIELDS, payload_enc)
 c.setopt(c.FOLLOWLOCATION, True)
-c.setopt(c.HTTPHEADER, 'authority: www.postgresql.org')
-c.setopt(c.HTTPHEADER, 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7')
-c.setopt(c.HTTPHEADER, 'accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7')
-c.setopt(c.HTTPHEADER, 'cache-control: max-age=0')
-c.setopt(c.HTTPHEADER, 'content-type: application/x-www-form-urlencoded')
-c.setopt(c.HTTPHEADER,f'csrftoken={csrftoken}')
-c.setopt(c.HTTPHEADER, 'origin: https://www.postgresql.org')
-c.setopt(c.HTTPHEADER, 'referer: https://www.postgresql.org/account/login/?next=/account/')
-c.setopt(c.HTTPHEADER, 'sec-ch-ua: "Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"')
-c.setopt(c.HTTPHEADER, 'sec-ch-ua-mobile: ?0')
-c.setopt(c.HTTPHEADER, 'sec-ch-ua-platform: "macOS"')
-c.setopt(c.HTTPHEADER, 'sec-fetch-dest: document')
-c.setopt(c.HTTPHEADER, 'sec-fetch-mode: navigate')
-c.setopt(c.HTTPHEADER, 'sec-fetch-site: same-origin')
-c.setopt(c.HTTPHEADER, 'sec-fetch-user: ?1')
-c.setopt(c.HTTPHEADER, 'upgrade-insecure-requests: 1')
-c.setopt(c.HTTPHEADER, 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
+req_headers = [
+#    'authority: www.postgresql.org',
+    'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'cache-control: max-age=0',
+    'content-type: application/x-www-form-urlencoded',
+   f'cookie: csrftoken={csrftoken}',
+    'origin: https://www.postgresql.org',
+    'referer: https://www.postgresql.org/account/login/?next=/account/',
+    'sec-ch-ua: "Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
+    'sec-ch-ua-mobile: ?0',
+    'sec-ch-ua-platform: "macOS"',
+    'sec-fetch-dest: document',
+    'sec-fetch-mode: navigate',
+    'sec-fetch-site: same-origin',
+    'sec-fetch-user: ?1',
+    'upgrade-insecure-requests: 1',
+    'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+]
+c.setopt(c.HTTPHEADER, req_headers)
+c.setopt(c.HEADERFUNCTION, cb_headers)
+c.setopt(c.VERBOSE, 1)
+c.perform()
+c.close()
 
-
-
-
-
-
-
+for k, v in headers:
+    print("HHHHHH", k, v)
 
 sys.exit(0)
 
@@ -197,13 +225,6 @@ def indir(url, dosya_adi):
 
 url = "https://www.postgresql.org/list/pgsql-admin/"  # İndirilecek web sitesinin URL'si
 dosya_adi = "psql-admin.html"       # Kaydedilecek dosya adı
-
-
-
-
-
-
-
 
 #for name_archive_link in list_name_archive_link():
 #    go_file(name_archive_link[0])
