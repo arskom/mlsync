@@ -60,3 +60,11 @@ log
 
 PKG-INFO
 .DS_STORE
+
+Postgresql-mlsync/
+
+Python-ml/
+
+config.ini
+trial_kernel_org/
+
