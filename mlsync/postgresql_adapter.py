@@ -128,13 +128,41 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
 }
 
-post = session.post(
-    "https://www.postgresql.org/account/login/", data=payload, headers=headers,
-)
 
-for k, v in post.raw.headers.items():
-    print("HHHHH",k,v)
-print(post.cookies)
+import pycurl
+from urllib.parse import urlencode
+csrftoken = session.cookies["csrftoken"]
+print(csrftoken)
+sys.exit(0)
+c = pycurl.Curl()
+c.setopt(c.URL, "https://www.postgresql.org/account/login/")
+c.setopt(c.POSTFIELDS, payload)
+c.setopt(c.FOLLOWLOCATION, True)
+c.setopt(c.HTTPHEADER, 'authority: www.postgresql.org')
+c.setopt(c.HTTPHEADER, 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7')
+c.setopt(c.HTTPHEADER, 'accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7')
+c.setopt(c.HTTPHEADER, 'cache-control: max-age=0')
+c.setopt(c.HTTPHEADER, 'content-type: application/x-www-form-urlencoded')
+c.setopt(c.HTTPHEADER,f'csrftoken={csrftoken}')
+c.setopt(c.HTTPHEADER, 'origin: https://www.postgresql.org')
+c.setopt(c.HTTPHEADER, 'referer: https://www.postgresql.org/account/login/?next=/account/')
+c.setopt(c.HTTPHEADER, 'sec-ch-ua: "Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"')
+c.setopt(c.HTTPHEADER, 'sec-ch-ua-mobile: ?0')
+c.setopt(c.HTTPHEADER, 'sec-ch-ua-platform: "macOS"')
+c.setopt(c.HTTPHEADER, 'sec-fetch-dest: document')
+c.setopt(c.HTTPHEADER, 'sec-fetch-mode: navigate')
+c.setopt(c.HTTPHEADER, 'sec-fetch-site: same-origin')
+c.setopt(c.HTTPHEADER, 'sec-fetch-user: ?1')
+c.setopt(c.HTTPHEADER, 'upgrade-insecure-requests: 1')
+c.setopt(c.HTTPHEADER, 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
+
+
+
+
+
+
+
+
 sys.exit(0)
 
 req2 = session.get("https://www.postgresql.org/account/")
