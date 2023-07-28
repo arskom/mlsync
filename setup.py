@@ -17,7 +17,7 @@ setup(
     install_requires=[
         "spyne",
         "readability-lxml",
-        "requests",
+        "pycurl",
         "neurons",
         "lxml",
         "twisted",

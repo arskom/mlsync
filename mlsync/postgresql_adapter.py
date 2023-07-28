@@ -1,6 +1,31 @@
+import logging
+import sys
+from pprint import pprint
+
 from bs4 import BeautifulSoup
 import requests
 import configparser
+import os
+
+try:
+    import http.client as http_client
+except ImportError:
+    # Python 2
+    import httplib as http_client
+http_client.HTTPConnection.debuglevel = 1
+
+# You must initialize logging, otherwise you'll not see debug output.
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
+
+
+def initial_make_directory():
+    os.chdir(os.path.expanduser("~"))
+    dizin_yolu = os.path.join("data", "ml", "lore.kernel.org")
+    os.makedirs(dizin_yolu, exist_ok=True)
 
 def download_file(download_url,file_name):
     response = session.get(download_url)
@@ -11,38 +36,68 @@ def download_file(download_url,file_name):
     else:
         print(f"Error: {response.status_code} - Download failed.")
 
-def dict_name_archive_link ():
+def list_name_archive_link ():
     url = "https://www.postgresql.org/list"
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     a_tags = soup.find_all('a')
-    dict_archive_link = {}
     for a_tag in a_tags:
         if "/list/" in a_tag['href'] and a_tag['href'] != "/list/":
-            dict_archive_link[a_tag.get_text()] = url + a_tag['href'][5:]
-    return dict_archive_link
+            list_archive_link = list()
+            list_archive_link.append(a_tag.get_text())
+            list_archive_link.append(url + a_tag['href'][5:])
+            yield list_archive_link
 
-def dict_date_link(url):
+def list_date_link(url):
 
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     rows = soup.find_all('tr')
-    dict_date_link = {}
 
     for row in rows:
         a_tags = row.select('a')
         if a_tags:
-            dict_date_link[a_tags[0].get_text()] = url + a_tags[-1]["href"][18:]
-    return dict_date_link
+            list_date_link = list()
+            list_date_link.append(a_tags[0].get_text())
+            list_date_link.append(url + a_tags[-1]["href"][18:])
+            yield list_date_link
+def check_file_existence(file_name):
+    return os.path.exists(file_name)
+
+def go_file(file_name):
+    if os.path.exists(file_name):
+        try:
+            os.chdir(file_name)
+            print(f"Entered the file named {file_name}")
+        except NotADirectoryError:
+            print(f"{file_name} is not a directory:")
+    else:
+        os.makedirs(file_name)
+        try:
+            os.chdir(file_name)
+            print(f"Entered the file named {file_name}")
+        except NotADirectoryError:
+            print(f"{file_name} is not a directory:")
+
+def exit_file():
+    try:
+        current_directory = os.getcwd()
+        print(f"Exited the directory of {current_directory}")
+        os.chdir("..")
+
+    except OSError as e:
+        print("Unable to exit the current directory. Error message:\n", e)
+
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read('/Users/burak/src/mlsync/mlsync/config.ini')
 
 username = config.get('Credentials', 'username')
 password = config.get('Credentials', 'password')
 
 session = requests.Session()
 response = session.get("https://www.postgresql.org/account/login/")
+
 soup = BeautifulSoup(response.text, "html.parser")
 csrfmiddlewaretoken = soup.find("input", {"name": "csrfmiddlewaretoken"}).get("value")
 this_is_the_login_form = soup.find("input", {"name": "this_is_the_login_form"}).get(
@@ -57,12 +112,80 @@ payload = {
 }
 
 headers = {
+    "Authority": "www.postgresql.org",
+    "Upgrade-Insecure-Requests": "1",
+    "Cache-Control": "max-age=0",
+    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Sec-Ch-Ua": 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
+    "Sec-Ch-Ua-Mobile": '?0',
+    "Sec-Ch-Ua-Platform": 'macOS',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
     "Origin": "https://www.postgresql.org",
     "Referer": "https://www.postgresql.org/account/login/?next=/account/",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
 }
 
 post = session.post(
-    "https://www.postgresql.org/account/login/", data=payload, headers=headers
+    "https://www.postgresql.org/account/login/", data=payload, headers=headers,
 )
 
+for k, v in post.raw.headers.items():
+    print("HHHHH",k,v)
+print(post.cookies)
+sys.exit(0)
 
+req2 = session.get("https://www.postgresql.org/account/")
+print(req2.cookies)
+print(session.cookies)
+
+
+session.cookies["sessionid"] = "tmzjcyu80f1adi0sdyt3z7i636n09l14"
+def download_file2(download_url):
+    response = session.get(download_url)
+    split_url = download_url.split("/")
+    dosya_adi = split_url[-1]
+    if response.status_code == 200:
+        with open(dosya_adi, 'wb') as dosya:
+            dosya.write(response.content)
+        print(f"{dosya_adi} downloaded successfully.")
+    else:
+        print(f"Error: {response.status_code} - Download failed.")
+
+
+def indir(url, dosya_adi):
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            with open(dosya_adi, 'wb') as dosya:
+                dosya.write(response.content)
+            print(f"{dosya_adi} başarıyla indirildi.")
+        else:
+            print(f"Hata: {response.status_code} - İndirilemedi.")
+    except Exception as e:
+        print(f"Hata: {e}")
+
+url = "https://www.postgresql.org/list/pgsql-admin/"  # İndirilecek web sitesinin URL'si
+dosya_adi = "psql-admin.html"       # Kaydedilecek dosya adı
+
+
+
+
+
+
+
+
+#for name_archive_link in list_name_archive_link():
+#    go_file(name_archive_link[0])
+#    for date_link in list_date_link(name_archive_link[1]):
+#        if check_file_existence(date_link[0]): #TODO
+#
+#            pass
+#        else:
+#            print(date_link[0],"is being downloaded.")
+#            download_file(date_link[1],date_link[0])
+#    exit_file()
+#
+#
