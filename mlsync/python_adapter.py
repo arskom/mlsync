@@ -59,10 +59,7 @@ def exit_file():
 
 def download_file(url):
     split_url = url.split("/")
-    result = subprocess.run(
-        ["curl -o  " + split_url[-1] + " -L " + url],
-        shell=True,
-    )
+    result = subprocess.run(["curl -o  " + split_url[-1] + " -L " + url], shell=True,)
 
     if result.returncode == 0:
         output = result.stdout
@@ -72,7 +69,7 @@ def download_file(url):
         print("The cloning process could not be completed.:", error)
 
 
-url = "https://mail.python.org/archives/" 
+url = "https://mail.python.org/archives/"
 response = requests.get(url)
 soup = BeautifulSoup(response.content, "html.parser")
 dict_archive_links = {}
