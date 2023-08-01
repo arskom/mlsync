@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 import requests
 from bs4 import BeautifulSoup
 import time
+import datetime
 
 #
 # import requests
@@ -144,14 +145,14 @@ def log_in():
     print(session.cookies)
 
 
-log_in()
-
-
 def postgresql_download_update():
+    log_in()
     a = 0
     for name_archive_link in list_name_archive_link():
         print(name_archive_link)
         ensure_directory(name_archive_link[0])
+        latest_file = "2001-May"
+        latest_file2 = "2001-May"
         for date_link in list_date_link(name_archive_link[1]):
             print(date_link)
             months = {
@@ -170,14 +171,17 @@ def postgresql_download_update():
             }
             if check_directory_existence(date_link[0]):  # TODO
                 split_file_name = date_link[0].split("-")
-                latest_file = "2001-May"
-                latest_file2 = "2001-May"
-                if int(latest_file2.split("-")[0]) < int(split_file_name[0]) and int(
-                    months[f"{latest_file2.split('-')[1]}"]
-                ) < int(months[f"{split_file_name[1]}"]):
-                    if int(latest_file.split("-")[0]) < int(split_file_name[0]) and int(
-                        months[f"{latest_file.split('-')[1]}"]
-                    ) < int(months[f"{split_file_name[1]}"]):
+                print(split_file_name)
+                if int(latest_file2.split("-")[0]) < int(split_file_name[0]) or (
+                    int(latest_file2.split("-")[0]) == int(split_file_name[0])
+                    and months[f"{latest_file2.split('-')[1]}"]
+                    < months[f"{split_file_name[1]}"]
+                ):
+                    if int(latest_file.split("-")[0]) < int(split_file_name[0]) or (
+                        int(latest_file.split("-")[0]) == int(split_file_name[0])
+                        and months[f"{latest_file.split('-')[1]}"]
+                        < months[f"{split_file_name[1]}"]
+                    ):
                         latest_file = date_link[0]
                     else:
                         latest_file2 = date_link[0]
@@ -203,7 +207,7 @@ def postgresql_download_update():
                     f"The update for {name_archive_link[0]} archive has been completed."
                 )
                 break
-            elif date_link == latest_file2 or date_link == latest_file:
+            elif date_link[0] == latest_file2 or date_link[0] == latest_file:
                 print(date_link[0], "is being updated...")
                 do_shortly += 1
                 try:
@@ -220,3 +224,6 @@ def postgresql_download_update():
                 print(a)
 
         exit_directory()
+
+
+postgresql_download_update()
