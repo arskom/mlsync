@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import subprocess
+import datetime
+from dateutil.relativedelta import relativedelta
 
 
 def find_archive_link(url):
@@ -59,7 +61,7 @@ def exit_file():
 
 def download_file(url):
     split_url = url.split("/")
-    result = subprocess.run(["curl -o  " + split_url[-1] + " -L " + url], shell=True,)
+    result = subprocess.run(["curl", "-o", split_url[-1], "-L", url])
 
     if result.returncode == 0:
         output = result.stdout
@@ -67,6 +69,15 @@ def download_file(url):
     else:
         error = result.stderr
         print("The cloning process could not be completed.:", error)
+
+
+def go_to_previous_month(date_str):
+    date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+    previous_month = relativedelta(months=1)
+    new_date = date_obj - previous_month
+    new_date_str = new_date.strftime("%Y-%m-%d")
+
+    return new_date_str
 
 
 url = "https://mail.python.org/archives/"
