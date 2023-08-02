@@ -140,6 +140,15 @@ def delete_td():
             time.sleep(5)
 
 
+def current_and_previous_month():
+    current_date = datetime.datetime.now()
+    previous_month = current_date - datetime.timedelta(days=current_date.day)  # TODO
+
+    current_date_str = current_date.strftime("%Y-%m")
+    previous_month_str = previous_month.strftime("%Y-%m")
+    return current_date_str, previous_month_str
+
+
 def postgresql_download_update():
     log_in()
     a = 0
@@ -171,13 +180,7 @@ def postgresql_download_update():
                     split_file_name[0] + "-" + months[f"{split_file_name[1]}"]
                 )
 
-                current_date = datetime.datetime.now()
-                previous_month = current_date - datetime.timedelta(
-                    days=current_date.day
-                )  # TODO
-
-                current_date_str = current_date.strftime("%Y-%m")
-                previous_month_str = previous_month.strftime("%Y-%m")
+                current_date_str, previous_month_str = current_and_previous_month()
 
                 if (
                     to_compare_file_name == current_date_str

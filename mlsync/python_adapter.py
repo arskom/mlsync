@@ -10,31 +10,33 @@ def find_archive_link(url):
     response = requests.get(url)
 
     if response.status_code != 200:
-        print("Siteye erişilemedi.")
-        exit()
+        print(url, "is not accessible.")
 
     soup = BeautifulSoup(response.content, "html.parser")
-
-    data = {}
 
     for link in soup.find_all("a"):
         href = link.get("href")
         text = link.text.strip()
-        if text == "Entire archive (mbox)":
+        if text == "This month (mbox)":
             b = url.split("/")
             url = "/".join(b[:3])
-            data[text] = url + href
-            return data[text]
+            return url + href
 
 
-def go_file(file_name):
-    try:
-        os.chdir(file_name)
-        print(f"Entered the file named {file_name}")
-    except FileNotFoundError:
-        print(f"The file named {file_name} could not be found:")
-    except NotADirectoryError:
-        print(f"{file_name} is not a directory:")
+def ensure_directory(file_name):
+    if os.path.exists(file_name):
+        try:
+            os.chdir(file_name)
+            print(f"Entered the file named {file_name}")
+        except NotADirectoryError:
+            print(f"{file_name} is not a directory:")
+    else:
+        os.makedirs(file_name)
+        try:
+            os.chdir(file_name)
+            print(f"Entered the file named {file_name}")
+        except NotADirectoryError:
+            print(f"{file_name} is not a directory:")
 
 
 def make_directory(name_directory):
@@ -60,24 +62,38 @@ def exit_file():
 
 
 def download_file(url):
-    split_url = url.split("/")
-    result = subprocess.run(["curl", "-o", split_url[-1], "-L", url])
+
+    result = subprocess.run(["curl", "-o", f"{url[-25:-18]}.mbox.gz", "-L", url])
 
     if result.returncode == 0:
-        output = result.stdout
-        print("The cloning process has been completed:", output)
+        print(f"{url[-25:-18]}.mbox.gz downloaded successfully.")
+
     else:
         error = result.stderr
         print("The cloning process could not be completed.:", error)
 
 
-def go_to_previous_month(date_str):
-    date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+def go_to_previous_month_url(url):
+    end_date = url[-10:]
+    start_date = url[-25:-15]
+    archive_name = url[-25:-18]
+    date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
     previous_month = relativedelta(months=1)
     new_date = date_obj - previous_month
     new_date_str = new_date.strftime("%Y-%m-%d")
+    url = url.replace(start_date, new_date_str)
+    url = url.replace(end_date, start_date)
+    url = url.replace(archive_name, new_date_str[:-3], 1)
+    return url
 
-    return new_date_str
+
+def current_and_previous_month():
+    current_date = datetime.datetime.now()
+    previous_month = current_date - datetime.timedelta(days=current_date.day)  # TODO
+
+    current_date_str = current_date.strftime("%Y-%m")
+    previous_month_str = previous_month.strftime("%Y-%m")
+    return current_date_str, previous_month_str
 
 
 url = "https://mail.python.org/archives/"
@@ -106,9 +122,15 @@ while True:
     else:
         del dict_archive_links["Next →"]
         for i in dict_archive_links:
-            make_directory(i)
-            go_file(i)
+            ensure_directory(i)
             a = find_archive_link(dict_archive_links[i])
-            download_file(a)
+            if os.path.exists(a[-25:-18]):
+                pass
+            else:
+                w
+                download_file(a)
+            if os.path.getsize(a[-25:-18]):
+                pass
+
             exit_file()
         break
