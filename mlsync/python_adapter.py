@@ -63,37 +63,42 @@ def exit_file():
 
 def download_file(url):
 
-    result = subprocess.run(["curl", "-o", f"{url[-25:-18]}.mbox.gz", "-L", url])
+    result = subprocess.run(["curl", "-o", f"{url[-25:-18]}.mbox.gz.tmp", "-L", url])
 
     if result.returncode == 0:
         print(f"{url[-25:-18]}.mbox.gz downloaded successfully.")
+        os.rename(f"{url[-25:-18]}.mbox.gz.tmp", f"{url[-25:-18]}.mbox.gz")
 
     else:
         error = result.stderr
         print("The cloning process could not be completed.:", error)
 
 
-def go_to_previous_month_url(url):
+def go_to_next_month_url(url):
     end_date = url[-10:]
     start_date = url[-25:-15]
     archive_name = url[-25:-18]
-    date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d")
     previous_month = relativedelta(months=1)
-    new_date = date_obj - previous_month
+    new_date = date_obj + previous_month
     new_date_str = new_date.strftime("%Y-%m-%d")
-    url = url.replace(start_date, new_date_str)
-    url = url.replace(end_date, start_date)
-    url = url.replace(archive_name, new_date_str[:-3], 1)
+    url = url.replace(end_date, new_date_str)
+    url = url.replace(start_date, end_date)
+    url = url.replace(archive_name, end_date[:-3], 1)
     return url
 
 
-def current_and_previous_month():
+def previous_and_current_and_next_month():
     current_date = datetime.datetime.now()
-    previous_month = current_date - datetime.timedelta(days=current_date.day)  # TODO
+    previous_month = current_date - datetime.timedelta(days=current_date.day)
+    next_month = current_date.replace(day=28) + datetime.timedelta(days=4)
+    if next_month.month != current_date.month:
+        next_month = next_month.replace(day=1)
 
     current_date_str = current_date.strftime("%Y-%m")
     previous_month_str = previous_month.strftime("%Y-%m")
-    return current_date_str, previous_month_str
+    next_month_str = next_month.strftime("%Y-%m")
+    return previous_month_str, current_date_str, next_month_str
 
 
 url = "https://mail.python.org/archives/"
@@ -121,16 +126,32 @@ while True:
         del dict_archive_links["Next →"]
     else:
         del dict_archive_links["Next →"]
+        previous, current, future = previous_and_current_and_next_month()
         for i in dict_archive_links:
             ensure_directory(i)
-            a = find_archive_link(dict_archive_links[i])
-            if os.path.exists(a[-25:-18]):
-                pass
+            link_archive = find_archive_link(dict_archive_links[i])
+            if os.path.exists(f"{link_archive[-25:-18]}.mbox.gz") or os.path.exists(
+                f"{previous}.mbox.gz"
+            ):
+                download_file(link_archive)
+                download_file(f"{previous}.mbox.gz")
             else:
-                w
-                download_file(a)
-            if os.path.getsize(a[-25:-18]):
-                pass
+                end_date = link_archive[-10:]
+                start_date = link_archive[-25:-15]
+                archive_name = link_archive[-25:-18]
+                new_end_date = "1970-02-01"
+                new_start_date = "1970-01-01"
+                new_archive_name = "1970-01"
+                link_archive = link_archive.replace(start_date, new_start_date)
+                link_archive = link_archive.replace(end_date, new_end_date)
+                link_archive = link_archive.replace(archive_name, new_archive_name, 1)
+
+                while link_archive[-10:] != current:  # FIXME
+                    if os.path.exists(f"{link_archive[-25:-18]}.mbox.gz"):
+                        continue
+                    else:
+                        download_file(link_archive)
+                        link_archive = go_to_next_month_url(link_archive)
 
             exit_file()
         break
