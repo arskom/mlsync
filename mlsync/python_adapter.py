@@ -1,3 +1,5 @@
+import time
+
 import requests
 from bs4 import BeautifulSoup
 import os
@@ -99,6 +101,8 @@ def previous_and_current_and_next_month():
     previous_month_str = previous_month.strftime("%Y-%m")
     next_month_str = next_month.strftime("%Y-%m")
     return previous_month_str, current_date_str, next_month_str
+
+
 def delete_tmp():
     for find_td in os.listdir():
         if find_td[0] == ".":
@@ -109,6 +113,7 @@ def delete_tmp():
                 f"{find_td} was found and deleted. {find_td[:-4]} will be downloaded later in the code."
             )
             time.sleep(5)
+
 
 url = "https://mail.python.org/archives/"
 response = requests.get(url)
@@ -152,16 +157,16 @@ while True:
             link_archive = link_archive.replace(end_date, new_end_date)
             link_archive = link_archive.replace(archive_name, new_archive_name, 1)
             delete_tmp()
-            while link_archive[-25:-18] != current:  # FIXME
-                if os.path.exists(f"{link_archive[-10:]}.mbox.gz"):
-                    download_file(url)
-                    go_to_next_month_url(url)
-                    download_file(url)
-                    print("The update for python is complete.")
+            while link_archive[-25:-18] != future:
 
-                    print("Update was completede")
+                if (
+                    link_archive[-25:-18] == previous
+                    or link_archive[-25:-18] == current
+                ):
+                    download_file(link_archive)
+
                 elif os.path.exists(f"{link_archive[-25:-18]}.mbox.gz"):
-                    print(link_archive[-25:-18],"already exists.")
+                    print(link_archive[-25:-18], "already exists.")
                     link_archive = go_to_next_month_url(link_archive)
                 else:
                     download_file(link_archive)
