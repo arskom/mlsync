@@ -99,7 +99,16 @@ def previous_and_current_and_next_month():
     previous_month_str = previous_month.strftime("%Y-%m")
     next_month_str = next_month.strftime("%Y-%m")
     return previous_month_str, current_date_str, next_month_str
-
+def delete_tmp():
+    for find_td in os.listdir():
+        if find_td[0] == ".":
+            continue
+        elif find_td[-4:] == ".tmp":
+            os.remove(find_td)
+            print(
+                f"{find_td} was found and deleted. {find_td[:-4]} will be downloaded later in the code."
+            )
+            time.sleep(5)
 
 url = "https://mail.python.org/archives/"
 response = requests.get(url)
@@ -130,28 +139,33 @@ while True:
         for i in dict_archive_links:
             ensure_directory(i)
             link_archive = find_archive_link(dict_archive_links[i])
-            if os.path.exists(f"{link_archive[-25:-18]}.mbox.gz") or os.path.exists(
-                f"{previous}.mbox.gz"
-            ):
-                download_file(link_archive)
-                download_file(f"{previous}.mbox.gz")
-            else:
-                end_date = link_archive[-10:]
-                start_date = link_archive[-25:-15]
-                archive_name = link_archive[-25:-18]
-                new_end_date = "1970-02-01"
-                new_start_date = "1970-01-01"
-                new_archive_name = "1970-01"
-                link_archive = link_archive.replace(start_date, new_start_date)
-                link_archive = link_archive.replace(end_date, new_end_date)
-                link_archive = link_archive.replace(archive_name, new_archive_name, 1)
 
-                while link_archive[-10:] != current:  # FIXME
-                    if os.path.exists(f"{link_archive[-25:-18]}.mbox.gz"):
-                        continue
-                    else:
-                        download_file(link_archive)
-                        link_archive = go_to_next_month_url(link_archive)
+            end_date = link_archive[-10:]
+            start_date = link_archive[-25:-15]
+            archive_name = link_archive[-25:-18]
+
+            new_end_date = "1970-02-01"
+            new_start_date = "1970-01-01"
+            new_archive_name = "1970-01"
+
+            link_archive = link_archive.replace(start_date, new_start_date)
+            link_archive = link_archive.replace(end_date, new_end_date)
+            link_archive = link_archive.replace(archive_name, new_archive_name, 1)
+            delete_tmp()
+            while link_archive[-25:-18] != current:  # FIXME
+                if os.path.exists(f"{link_archive[-10:]}.mbox.gz"):
+                    download_file(url)
+                    go_to_next_month_url(url)
+                    download_file(url)
+                    print("The update for python is complete.")
+
+                    print("Update was completede")
+                elif os.path.exists(f"{link_archive[-25:-18]}.mbox.gz"):
+                    print(link_archive[-25:-18],"already exists.")
+                    link_archive = go_to_next_month_url(link_archive)
+                else:
+                    download_file(link_archive)
+                    link_archive = go_to_next_month_url(link_archive)
 
             exit_file()
         break

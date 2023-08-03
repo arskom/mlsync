@@ -128,7 +128,7 @@ def log_in():
     print(session.cookies)
 
 
-def delete_td():
+def delete_tmp():
     for find_td in os.listdir():
         if find_td[0] == ".":
             continue
@@ -156,7 +156,7 @@ def postgresql_download_update():
         print(name_archive_link)
         ensure_directory(name_archive_link[0])
         update_list = []
-        delete_td()
+        delete_tmp()
         for date_link in list_date_link(name_archive_link[1]):
 
             print(date_link)
