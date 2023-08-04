@@ -5,7 +5,14 @@ import requests
 import time
 
 
-def find_mirror(url):
+def initial_make_directory():
+    os.chdir(os.path.expanduser("~"))
+    dizin_yolu = os.path.join("data", "ml", "mail.python.org")
+    os.makedirs(dizin_yolu, exist_ok=True)
+    os.chdir(dizin_yolu)
+
+
+def find_mirror_kernel(url):
     target_text = "mirror"
     response = requests.get(url)
     if response.status_code == 200:
@@ -20,13 +27,7 @@ def find_mirror(url):
         print("Page could not be fetched. Error code:", response.status_code)
 
 
-def initial_make_directory():
-    os.chdir(os.path.expanduser("~"))
-    dizin_yolu = os.path.join("data", "ml", "lore.kernel.org")
-    os.makedirs(dizin_yolu, exist_ok=True)
-
-
-def find_git_clone_url(url, link_text):
+def find_git_clone_url_kernel(url, link_text):
     response = requests.get(url)
 
     soup = BeautifulSoup(response.content, "html.parser")
@@ -43,7 +44,7 @@ def find_git_clone_url(url, link_text):
             yield link.get("href")
 
 
-def git_clone(url):
+def download_file_kernel(url):
     split_url = url.split("/")
     result = subprocess.run(["git", "clone", url, f"{split_url[-2]}/{split_url[-1]}"])
 
@@ -55,7 +56,7 @@ def git_clone(url):
         print("The cloning process could not be completed.:", error)
 
 
-def update_git_clone(url):
+def update_git_clone_kernel(url):
     split_url = url.split("/")
     result = subprocess.run(["git", "clone", url, f"{split_url[-1]}"])
 
@@ -67,28 +68,23 @@ def update_git_clone(url):
         print("The update process could not be completed:", error)
 
 
-def files_of_directory():
-    file_names = os.listdir()
-
-    for file_name in file_names:
-        yield file_name
-
-
-def check_file_existence(file_name):
-    return os.path.exists(file_name)
-
-
-def go_file(file_name):
-    try:
-        os.chdir(file_name)
-        print(f"Entered the file named {file_name}")
-    except FileNotFoundError:
-        print(f"The file named {file_name} could not be found:")
-    except NotADirectoryError:
-        print(f"{file_name} is not a directory:")
+def ensure_directory(file_name):
+    if os.path.exists(file_name):
+        try:
+            os.chdir(file_name)
+            print(f"Entered the file named {file_name}")
+        except NotADirectoryError:
+            print(f"{file_name} is not a directory:")
+    else:
+        os.makedirs(file_name)
+        try:
+            os.chdir(file_name)
+            print(f"Entered the file named {file_name}")
+        except NotADirectoryError:
+            print(f"{file_name} is not a directory:")
 
 
-def exit_file():
+def exit_directory():
     try:
         current_directory = os.getcwd()
         print(f"Exited the directory of {current_directory}")
@@ -98,7 +94,7 @@ def exit_file():
         print("Unable to exit the current directory. Error message:\n", e)
 
 
-def pull_file():
+def pull_file_kernel():
     result = subprocess.run(["git", "pull"])
     if result.returncode == 0:
         print("The file has been updated.")
@@ -107,10 +103,10 @@ def pull_file():
         print("The file could not be updated. Error command:", error)
 
 
-def update_archive(name_archive, link_dict):
-    go_file(name_archive)
+def update_archive_kernel(name_archive, link_dict):
+    ensure_directory(name_archive)
 
-    b = files_of_directory()
+    b = os.listdir()
     list_directory = []
 
     for files_name in b:
@@ -118,27 +114,27 @@ def update_archive(name_archive, link_dict):
             continue
         list_directory.append(files_name)
 
-    a = find_git_clone_url(link_dict[name_archive], name_archive)
+    a = find_git_clone_url_kernel(link_dict[name_archive], name_archive)
     for git_url in a:
         split_url = git_url.split("/")
 
         print(list_directory)
         print(split_url[-1])
         if split_url[-1] in list_directory:
-            go_file(split_url[-1])
-            pull_file()
-            exit_file()
+            ensure_directory(split_url[-1])
+            pull_file_kernel()
+            exit_directory()
         else:
             print(
                 f"A new URL({git_url}) was found inside folder {name_archive} and is being downloaded."
             )
 
-            update_git_clone(git_url)
-    exit_file()
+            update_git_clone_kernel(git_url)
+    exit_directory()
 
 
-def git_clone_kernel():
-    initial_make_directory()
+def kernel_download_update():
+    # initial_make_directory()
     url = "https://lore.kernel.org"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -160,7 +156,7 @@ def git_clone_kernel():
                 link_dict[link_text] = url + "/" + link_href
 
             else:
-                link_dict[link_text] = find_mirror(url + "/" + link_href)
+                link_dict[link_text] = find_mirror_kernel(url + "/" + link_href)
                 print(link_text)
 
         if "next (older)" in link_dict:
@@ -170,20 +166,21 @@ def git_clone_kernel():
 
         else:
             names_archives_files = []
-            for name_file in files_of_directory():
+            file_names = os.listdir()
+            for name_file in file_names:
                 if name_file[0] == ".":
                     continue
                 names_archives_files.append(name_file)
 
             for name_archive in link_dict.keys():
-                if check_file_existence(name_archive):
+                if os.path.exists(name_archive):
                     names_archives_files.remove(name_archive)
-                    update_archive(name_archive, link_dict)
+                    update_archive_kernel(name_archive, link_dict)
 
                 else:
-                    a = find_git_clone_url(link_dict[name_archive], name_archive)
+                    a = find_git_clone_url_kernel(link_dict[name_archive], name_archive)
                     for git_url in a:
-                        git_clone(git_url)
+                        download_file_kernel(git_url)
             if len(names_archives_files) != 0:
                 for files_name in names_archives_files:
                     print(
@@ -201,5 +198,5 @@ def git_clone_kernel():
 
 
 while True:
-    git_clone_kernel()
+    kernel_download_update()
     time.sleep(600)

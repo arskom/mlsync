@@ -8,7 +8,13 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 
-def find_archive_link(url):
+def initial_make_directory():
+    os.chdir(os.path.expanduser("~"))
+    dizin_yolu = os.path.join("data", "ml", "mail.python.org")
+    os.makedirs(dizin_yolu, exist_ok=True)
+
+
+def find_archive_link_python(url):
     response = requests.get(url)
 
     if response.status_code != 200:
@@ -41,19 +47,7 @@ def ensure_directory(file_name):
             print(f"{file_name} is not a directory:")
 
 
-def make_directory(name_directory):
-    import os
-
-    directory_path = name_directory
-
-    try:
-        os.mkdir(directory_path)
-        print(f"{directory_path} dizini oluşturuldu.")
-    except FileExistsError:
-        print(f"{directory_path} dizini zaten mevcut.")
-
-
-def exit_file():
+def exit_directory():
     try:
         current_directory = os.getcwd()
         print(f"Exited the directory of {current_directory}")
@@ -63,7 +57,7 @@ def exit_file():
         print("Unable to exit the current directory. Error message:\n", e)
 
 
-def download_file(url):
+def download_file_python(url):
 
     result = subprocess.run(["curl", "-o", f"{url[-25:-18]}.mbox.gz.tmp", "-L", url])
 
@@ -90,6 +84,18 @@ def go_to_next_month_url(url):
     return url
 
 
+def delete_tmp():
+    for find_td in os.listdir():
+        if find_td[0] == ".":
+            continue
+        elif find_td[-4:] == ".tmp":
+            os.remove(find_td)
+            print(
+                f"{find_td} was found and deleted. {find_td[:-4]} will be downloaded later in the code."
+            )
+            time.sleep(5)
+
+
 def previous_and_current_and_next_month():
     current_date = datetime.datetime.now()
     previous_month = current_date - datetime.timedelta(days=current_date.day)
@@ -103,74 +109,65 @@ def previous_and_current_and_next_month():
     return previous_month_str, current_date_str, next_month_str
 
 
-def delete_tmp():
-    for find_td in os.listdir():
-        if find_td[0] == ".":
-            continue
-        elif find_td[-4:] == ".tmp":
-            os.remove(find_td)
-            print(
-                f"{find_td} was found and deleted. {find_td[:-4]} will be downloaded later in the code."
-            )
-            time.sleep(5)
+def python_download_update():
+    # initial_make_directory()
+    url = "https://mail.python.org/archives/"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+    dict_archive_links = {}
+    links = soup.find_all("a")
+    while True:
+        for link in links:
+            href = link.get("href")
+            text = link.text.strip()
+            if text == "":
+                continue
+            elif "/archives/list/" in href:
+                dict_archive_links[text] = url + href[10:]
+                print(text, dict_archive_links[text])
+            elif text == "Next →":
+                dict_archive_links[text] = url + href
+                print(text, dict_archive_links[text])
 
+        if "Next →" in dict_archive_links and "page" in dict_archive_links["Next →"]:
+            response = requests.get(dict_archive_links["Next →"])
+            soup = BeautifulSoup(response.content, "html.parser")
+            links = soup.find_all("a")
+            del dict_archive_links["Next →"]
+        else:
+            del dict_archive_links["Next →"]
+            previous, current, future = previous_and_current_and_next_month()
+            for i in dict_archive_links:
+                ensure_directory(i)
+                link_archive = find_archive_link_python(dict_archive_links[i])
 
-url = "https://mail.python.org/archives/"
-response = requests.get(url)
-soup = BeautifulSoup(response.content, "html.parser")
-dict_archive_links = {}
-links = soup.find_all("a")
-while True:
-    for link in links:
-        href = link.get("href")
-        text = link.text.strip()
-        if text == "":
-            continue
-        elif "/archives/list/" in href:
-            dict_archive_links[text] = url + href[10:]
-            print(text, dict_archive_links[text])
-        elif text == "Next →":
-            dict_archive_links[text] = url + href
-            print(text, dict_archive_links[text])
+                end_date = link_archive[-10:]
+                start_date = link_archive[-25:-15]
+                archive_name = link_archive[-25:-18]
 
-    if "Next →" in dict_archive_links and "page" in dict_archive_links["Next →"]:
-        response = requests.get(dict_archive_links["Next →"])
-        soup = BeautifulSoup(response.content, "html.parser")
-        links = soup.find_all("a")
-        del dict_archive_links["Next →"]
-    else:
-        del dict_archive_links["Next →"]
-        previous, current, future = previous_and_current_and_next_month()
-        for i in dict_archive_links:
-            ensure_directory(i)
-            link_archive = find_archive_link(dict_archive_links[i])
+                new_end_date = "1970-02-01"
+                new_start_date = "1970-01-01"
+                new_archive_name = "1970-01"
 
-            end_date = link_archive[-10:]
-            start_date = link_archive[-25:-15]
-            archive_name = link_archive[-25:-18]
+                link_archive = link_archive.replace(start_date, new_start_date)
+                link_archive = link_archive.replace(end_date, new_end_date)
+                link_archive = link_archive.replace(archive_name, new_archive_name, 1)
+                delete_tmp()
+                while link_archive[-25:-18] != future:
 
-            new_end_date = "1970-02-01"
-            new_start_date = "1970-01-01"
-            new_archive_name = "1970-01"
+                    if (
+                        link_archive[-25:-18] == previous
+                        or link_archive[-25:-18] == current
+                    ):
+                        download_file_python(link_archive)
+                        link_archive = go_to_next_month_url(link_archive)
 
-            link_archive = link_archive.replace(start_date, new_start_date)
-            link_archive = link_archive.replace(end_date, new_end_date)
-            link_archive = link_archive.replace(archive_name, new_archive_name, 1)
-            delete_tmp()
-            while link_archive[-25:-18] != future:
+                    elif os.path.exists(f"{link_archive[-25:-18]}.mbox.gz"):
+                        print(link_archive[-25:-18], "already exists.")
+                        link_archive = go_to_next_month_url(link_archive)
+                    else:
+                        download_file_python(link_archive)
+                        link_archive = go_to_next_month_url(link_archive)
 
-                if (
-                    link_archive[-25:-18] == previous
-                    or link_archive[-25:-18] == current
-                ):
-                    download_file(link_archive)
-
-                elif os.path.exists(f"{link_archive[-25:-18]}.mbox.gz"):
-                    print(link_archive[-25:-18], "already exists.")
-                    link_archive = go_to_next_month_url(link_archive)
-                else:
-                    download_file(link_archive)
-                    link_archive = go_to_next_month_url(link_archive)
-
-            exit_file()
-        break
+                exit_directory()
+            break
