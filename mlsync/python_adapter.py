@@ -18,7 +18,8 @@ def find_archive_link_python(url):
     response = requests.get(url)
 
     if response.status_code != 200:
-        print(url, "is not accessible.")
+        print(url, "is not accessible.",response.status_code)
+
 
     soup = BeautifulSoup(response.content, "html.parser")
 
@@ -139,8 +140,10 @@ def python_download_update():
             previous, current, future = previous_and_current_and_next_month()
             for i in dict_archive_links:
                 ensure_directory(i)
+                if type(link_archive) != str:
+                    print(link_archive,"could not be downloaded.")
+                    continue
                 link_archive = find_archive_link_python(dict_archive_links[i])
-
                 end_date = link_archive[-10:]
                 start_date = link_archive[-25:-15]
                 archive_name = link_archive[-25:-18]

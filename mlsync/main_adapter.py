@@ -15,22 +15,6 @@ def initial_make_directory(directory_name):
     os.chdir(path)
 
 
-def find_archive_link_python(url):
-    response = requests.get(url)
-
-    if response.status_code != 200:
-        print(url, "is not accessible.")
-
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    for link in soup.find_all("a"):
-        href = link.get("href")
-        text = link.text.strip()
-        if text == "This month (mbox)":
-            b = url.split("/")
-            url = "/".join(b[:3])
-            return url + href
-
 
 def ensure_directory(file_name):
     if os.path.exists(file_name):
@@ -99,6 +83,21 @@ def previous_and_current_and_next_month():
 
 # Python's functions
 
+def find_archive_link_python(url):
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        print(url, "is not accessible.")
+
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    for link in soup.find_all("a"):
+        href = link.get("href")
+        text = link.text.strip()
+        if text == "This month (mbox)":
+            b = url.split("/")
+            url = "/".join(b[:3])
+            return url + href
 
 def download_file_python(url):
 
@@ -141,9 +140,12 @@ def python_download_update():
         else:
             del dict_archive_links["Next →"]
             previous, current, future = previous_and_current_and_next_month()
-            for i in dict_archive_links:
-                ensure_directory(i)
-                link_archive = find_archive_link_python(dict_archive_links[i])
+            for archive_link in dict_archive_links:
+                ensure_directory(archive_link)
+                if type(archive_link) != str:
+                    print(archive_link,"could not be downloaded.")
+                    continue
+                link_archive = find_archive_link_python(dict_archive_links[archive_link])
 
                 end_date = link_archive[-10:]
                 start_date = link_archive[-25:-15]
@@ -276,7 +278,7 @@ def update_archive_kernel(name_archive, link_dict):
 
 
 def kernel_download_update():
-    initial_make_directory("mail.python.org")
+    initial_make_directory("lore.kernel.org")
     url = "https://lore.kernel.org"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
